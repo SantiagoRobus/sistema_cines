@@ -1,0 +1,10 @@
+# Ignorar carpetas del sistema operativo
+.DS_Store
+Thumbs.db
+
+# Ignorar archivos temporales o de entorno local de editores
+.vscode/
+.idea/
+
+# Ignorar logs o temporales de PHP
+*.log
