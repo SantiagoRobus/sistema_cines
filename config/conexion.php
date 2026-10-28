@@ -3,7 +3,7 @@
 $host = "localhost";
 $dbname = "sistema_cines";
 $user = "postgres";
-$password = "Ds0310**"; // Tu contraseña actual
+$password = "******";
 
 try {
     $pdo = new PDO("pgsql:host=$host;dbname=$dbname", $user, $password);
