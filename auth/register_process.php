@@ -1,47 +1,60 @@
 <?php
-require_once '../config/conexion.php';
+require_once '../config/seguridad.php';
+iniciar_sesion_segura();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $nombre = trim($_POST['nombre']);
-    $apellidos = trim($_POST['apellidos']);
-    $email = trim($_POST['email']);
-    $password = trim($_POST['password']);
-    $codigo_secreto = trim($_POST['codigo_secreto']);
+    verificar_token_csrf();
 
-    // Asignación de roles basada en el código secreto
-    $rol = 3; // Por defecto, todos son Clientes (Rol 3)
-    if ($codigo_secreto === 'EMPLEADO-CINE') {
-        $rol = 2; // Se asigna Rol de Empleado
-    } elseif ($codigo_secreto === 'ADMIN-MASTER') {
-        $rol = 1; // Se asigna Rol de Administrador
+    $nombre = post_texto('nombre');
+    $apellidos = post_texto('apellidos');
+    $email = filter_var(post_texto('email'), FILTER_VALIDATE_EMAIL);
+    $password = post_texto('password', false);
+
+    if (
+        $nombre === '' ||
+        $apellidos === '' ||
+        $email === false ||
+        !is_string($password) ||
+        !password_cumple_politica($password, [$nombre, $apellidos, $email])
+    ) {
+        header('Location: ../views/public/registro.php?msg=invalid');
+        exit();
     }
 
-    // Encriptar la contraseña
-    $hash = password_hash($password, PASSWORD_BCRYPT);
+    require_once '../config/conexion.php';
+    $hash = password_hash($password, PASSWORD_DEFAULT);
 
     try {
-        $sql = "INSERT INTO USUARIO (nombre, apellidos, email, password_hash, cod_rol, activo) 
-                VALUES (:nombre, :apellidos, :email, :hash, :rol, '1')";
-        $stmt = $pdo->prepare($sql);
-        
+        $pdo->beginTransaction();
+        $stmt = $pdo->prepare(
+            "INSERT INTO USUARIO (nombre, apellidos, email, password_hash, cod_rol, activo)
+             VALUES (:nombre, :apellidos, :email, :hash, 3, '1')
+             RETURNING cod_usuario"
+        );
         $stmt->execute([
             ':nombre' => $nombre,
             ':apellidos' => $apellidos,
             ':email' => $email,
             ':hash' => $hash,
-            ':rol' => $rol
         ]);
+        $usuarioId = $stmt->fetchColumn();
 
-        // Registro exitoso
-        header("Location: ../views/public/registro.php?msg=success");
+        $stmt = $pdo->prepare('INSERT INTO CLIENTE (cod_usuario) VALUES (:usuario)');
+        $stmt->execute([':usuario' => $usuarioId]);
+        $pdo->commit();
+
+        header('Location: ../views/public/registro.php?msg=success');
         exit();
     } catch (PDOException $e) {
-        // Error (probablemente el email ya está registrado por la restricción UNIQUE)
-        header("Location: ../views/public/registro.php?msg=error");
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        error_log('No se pudo registrar el usuario: ' . $e->getMessage());
+        header('Location: ../views/public/registro.php?msg=error');
         exit();
     }
 } else {
-    header("Location: ../views/public/registro.php");
+    header('Location: ../views/public/registro.php');
     exit();
 }
 ?>

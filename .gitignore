@@ -8,3 +8,8 @@ Thumbs.db
 
 # Ignorar logs o temporales de PHP
 *.log
+
+# Credenciales locales; nunca subirlas al repositorio
+.env
+.env.*
+!.env.example

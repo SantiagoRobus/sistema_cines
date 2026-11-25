@@ -1,18 +1,22 @@
 <?php
-session_start();
+require_once '../config/seguridad.php';
+iniciar_sesion_segura();
 require_once '../config/conexion.php';
 
 // Validar que el usuario sea administrador
-if (!isset($_SESSION['rol_id']) || $_SESSION['rol_id'] != 1) {
+if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($_SESSION['rol_id']) || (int) $_SESSION['rol_id'] !== 1) {
     header("Location: ../views/public/login.php");
     exit();
 }
+verificar_token_csrf();
 
 // Recibir los parámetros (ya sea por POST desde los formularios o por GET desde SweetAlert2)
-$accion = $_POST['accion'] ?? $_GET['accion'] ?? '';
-$tabla = $_POST['tabla'] ?? $_GET['tabla'] ?? '';
-$id = $_POST['id'] ?? $_GET['id'] ?? null;
-$valor = $_POST['valor'] ?? '';
+$accion = post_texto('accion');
+$tabla = post_texto('tabla');
+$id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
+$valor = post_texto('valor');
+$beneficio = post_texto('beneficio_requerido');
+$tiposBeneficio = ['estudiante', 'pensionado', 'servicio_militar', 'discapacidad'];
 
 // Definir nombres de columnas y tablas en la base de datos según la solicitud
 if ($tabla === 'genero') {
@@ -31,18 +35,38 @@ if ($tabla === 'genero') {
 
 try {
     if ($accion === 'crear') {
-        $sql = "INSERT INTO $nombreTablaDB ($columnaValor) VALUES (:valor)";
+        if ($valor === '' || ($tabla === 'tarifa' && $beneficio !== '' && !in_array($beneficio, $tiposBeneficio, true))) {
+            header("Location: ../views/admin/crud_catalogos.php?msg=error");
+            exit();
+        }
+        $sql = $tabla === 'tarifa'
+            ? "INSERT INTO TARIFA ($columnaValor, beneficio_requerido) VALUES (:valor, :beneficio)"
+            : "INSERT INTO GENERO ($columnaValor) VALUES (:valor)";
         $stmt = $pdo->prepare($sql);
-        $stmt->execute([':valor' => trim($valor)]);
+        $parametros = [':valor' => $valor];
+        if ($tabla === 'tarifa') {
+            $parametros[':beneficio'] = $beneficio !== '' ? $beneficio : null;
+        }
+        $stmt->execute($parametros);
         header("Location: ../views/admin/crud_catalogos.php?msg=creado");
         
-    } elseif ($accion === 'editar' && $id) {
-        $sql = "UPDATE $nombreTablaDB SET $columnaValor = :valor WHERE $columnaId = :id";
+    } elseif ($accion === 'editar' && $id && $id > 0 && $valor !== '') {
+        if ($tabla === 'tarifa' && $beneficio !== '' && !in_array($beneficio, $tiposBeneficio, true)) {
+            header("Location: ../views/admin/crud_catalogos.php?msg=error");
+            exit();
+        }
+        $sql = $tabla === 'tarifa'
+            ? "UPDATE TARIFA SET $columnaValor = :valor, beneficio_requerido = :beneficio WHERE $columnaId = :id"
+            : "UPDATE GENERO SET $columnaValor = :valor WHERE $columnaId = :id";
         $stmt = $pdo->prepare($sql);
-        $stmt->execute([':valor' => trim($valor), ':id' => $id]);
+        $parametros = [':valor' => $valor, ':id' => $id];
+        if ($tabla === 'tarifa') {
+            $parametros[':beneficio'] = $beneficio !== '' ? $beneficio : null;
+        }
+        $stmt->execute($parametros);
         header("Location: ../views/admin/crud_catalogos.php?msg=editado");
         
-    } elseif ($accion === 'eliminar' && $id) {
+    } elseif ($accion === 'eliminar' && $id && $id > 0) {
         $sql = "DELETE FROM $nombreTablaDB WHERE $columnaId = :id";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([':id' => $id]);
@@ -52,6 +76,7 @@ try {
         header("Location: ../views/admin/crud_catalogos.php?msg=error");
     }
 } catch (PDOException $e) {
+    error_log('No se pudo procesar el catálogo: ' . $e->getMessage());
     header("Location: ../views/admin/crud_catalogos.php?msg=error");
 }
 exit();

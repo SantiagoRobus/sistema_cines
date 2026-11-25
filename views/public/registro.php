@@ -1,28 +1,22 @@
+<?php
+require_once '../../config/seguridad.php';
+iniciar_sesion_segura();
+?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registro - Cines</title>
+    <title>Crear cuenta - Cinex+</title>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <style>
-        body { background-color: #2c2c2c; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: sans-serif; margin: 0; }
-        .login-container { background-color: #000; color: #fff; padding: 30px; border-radius: 8px; width: 350px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
-        .login-container h2 { text-align: center; margin-bottom: 20px; }
-        .form-group { margin-bottom: 15px; display: flex; flex-direction: column; }
-        .form-group label { margin-bottom: 5px; font-size: 14px; }
-        .form-group input { padding: 10px; border-radius: 4px; border: 1px solid #555; background: #222; color: #fff; }
-        .btn-login { background-color: #d90000; color: white; border: none; padding: 10px; width: 100%; border-radius: 4px; cursor: pointer; font-weight: bold; margin-top: 10px;}
-        .links { margin-top: 15px; display: flex; justify-content: center; font-size: 12px; }
-        .links a { color: #ccc; text-decoration: none; }
-        .links a:hover { color: #fff; }
-    </style>
+    <link rel="stylesheet" href="../../assets/css/cinex.css">
 </head>
-<body>
+<body class="auth-page">
     <div class="login-container">
         <h2>Regístrese con nosotros</h2>
         
         <form action="../../auth/register_process.php" method="POST">
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(token_csrf(), ENT_QUOTES, 'UTF-8'); ?>">
             <div class="form-group">
                 <label for="nombre">Nombre:</label>
                 <input type="text" id="nombre" name="nombre" required>
@@ -39,15 +33,11 @@
             </div>
             
             <div class="form-group">
-                <label for="password">Contraseña:</label>
-                <input type="password" id="password" name="password" required>
+                <label for="password">Contraseña</label>
+                <input type="password" id="password" name="password" minlength="8" autocomplete="new-password" required>
+                <small>Mínimo 8 caracteres: mayúscula, minúscula, número y símbolo (* ? ! @ # $ / ( ) { } = . , ; :). Sin espacios, patrones simples ni tu nombre o correo.</small>
             </div>
 
-            <div class="form-group">
-                <label for="codigo_secreto">Código de Empleado (Opcional):</label>
-                <input type="password" id="codigo_secreto" name="codigo_secreto" placeholder="Solo personal autorizado">
-            </div>
-            
             <button type="submit" class="btn-login">Registrarse</button>
         </form>
 
@@ -78,6 +68,14 @@
                 confirmButtonColor: '#d90000'
             });
             // Limpiar la URL
+            window.history.replaceState(null, null, window.location.pathname);
+        } else if (msg === 'invalid') {
+            Swal.fire({
+                title: 'Revisa tus datos',
+                text: 'La contraseña debe tener 8 caracteres, mayúscula, minúscula, número y símbolo, sin espacios, patrones ni datos personales.',
+                icon: 'warning',
+                confirmButtonColor: '#f6bd4b'
+            });
             window.history.replaceState(null, null, window.location.pathname);
         }
     </script>

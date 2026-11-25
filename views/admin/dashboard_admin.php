@@ -1,24 +1,32 @@
 <?php
-session_start();
+require_once '../../config/seguridad.php';
+iniciar_sesion_segura();
 
 // 1. CONTROL DE ACCESO ESTRICTO: Verificar sesión y rol de Administrador (Rol 1)
-if (!isset($_SESSION['rol_id']) || (int)$_SESSION['rol_id'] !== 1) {
-    header("Location: ../public/login.php");
-    exit();
-}
+exigir_rol([1], '../public/login.php');
 
 require_once '../../config/conexion.php';
 
 // 2. CONSULTA SEGURA: Traer lista de usuarios
 try {
-    $sql = "SELECT u.cod_usuario, u.nombre, u.apellidos, u.email, u.telefono, u.cod_rol, r.nombre as rol_nombre, u.activo 
+    $sql = "SELECT u.cod_usuario, u.nombre, u.apellidos, u.email, u.telefono, u.cod_rol, r.nombre as rol_nombre, u.activo,
+                   COALESCE(e.cod_cine, al.cod_cine) AS cod_cine
             FROM USUARIO u 
             INNER JOIN ROL r ON u.cod_rol = r.cod_rol 
+            LEFT JOIN EMPLEADO e ON e.cod_usuario = u.cod_usuario
+            LEFT JOIN ADMIN_LOCAL al ON al.cod_usuario = u.cod_usuario
             ORDER BY u.cod_usuario ASC";
     $stmt = $pdo->query($sql);
     $usuarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $cines = $pdo->query("SELECT cod_cine, nombre FROM CINE WHERE activo = '1' ORDER BY nombre")->fetchAll(PDO::FETCH_ASSOC);
+    $solicitudesBeneficioPendientes = (int) $pdo->query(
+        "SELECT COUNT(*) FROM SOLICITUD_BENEFICIO WHERE estado = 'pendiente'"
+    )->fetchColumn();
+    $recuperacionesPendientes = (int) $pdo->query(
+        "SELECT COUNT(*) FROM PASSWORD_RESET_REQUEST WHERE estado = 'pendiente'"
+    )->fetchColumn();
 } catch (PDOException $e) {
-    // Evita revelar detalles técnicos del servidor o PostgreSQL
+    error_log('No se pudo cargar el panel administrativo: ' . $e->getMessage());
     die("Error seguro: Ocurrió un problema al consultar la base de datos.");
 }
 ?>
@@ -31,113 +39,17 @@ try {
     <title>Panel de Administración - Cinex+</title>
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <style>
-        body { 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            background-color: #2c2c2c; 
-            color: #333; 
-            margin: 0; 
-            padding: 20px; 
-        }
-        
-        /* Cabecera Principal */
-        .header { 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            background: #000; 
-            color: #fff; 
-            padding: 15px 25px; 
-            border-radius: 8px; 
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3); 
-            margin-bottom: 25px; 
-        }
-        .header h2 { margin: 0; font-size: 20px; }
-        .btn-logout { 
-            background: #d90000; 
-            color: #fff; 
-            text-decoration: none; 
-            padding: 8px 16px; 
-            border-radius: 4px; 
-            font-size: 14px; 
-            font-weight: bold; 
-            transition: background 0.2s; 
-        }
-        .btn-logout:hover { background: #b30000; }
-
-        /* Panel de Tarjetas / Módulos de Navegación */
-        .modules-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 15px;
-            margin-bottom: 25px;
-        }
-        .card-module {
-            background: #fff;
-            padding: 18px;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-            text-decoration: none;
-            color: #111;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            transition: transform 0.2s, box-shadow 0.2s;
-            border-left: 5px solid #000;
-        }
-        .card-module:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 6px 12px rgba(0,0,0,0.3);
-        }
-        .card-module.catalogos { border-left-color: #17a2b8; }
-        .card-module.cines { border-left-color: #e83e8c; }
-        .card-module.salas { border-left-color: #fd7e14; }
-
-        .card-module h4 { margin: 0 0 8px 0; font-size: 16px; color: #111; }
-        .card-module p { margin: 0; font-size: 12px; color: #666; }
-
-        /* Contenedor de Tabla */
-        .container { 
-            background: #fff; 
-            padding: 25px; 
-            border-radius: 8px; 
-            box-shadow: 0 4px 10px rgba(0,0,0,0.2); 
-        }
-        .table-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-        }
-        .table-header h3 { margin: 0; font-size: 18px; }
-
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; font-size: 14px; }
-        th { background-color: #f8f9fa; color: #444; }
-
-        /* Botones de Acción */
-        .btn-add { background: #28a745; color: #fff; padding: 10px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold; }
-        .btn-action { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; color: #fff; font-size: 12px; margin-right: 4px; }
-        .btn-edit { background: #007bff; }
-        .btn-delete { background: #dc3545; }
-
-        /* Estilos de Modales */
-        .modal { display: none; position: fixed; z-index: 10; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); justify-content: center; align-items: center; }
-        .modal-content { background-color: #fff; padding: 25px; border-radius: 8px; width: 380px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .close { color: #aaa; font-size: 24px; font-weight: bold; cursor: pointer; }
-        .form-group { margin-bottom: 12px; display: flex; flex-direction: column; }
-        .form-group label { margin-bottom: 4px; font-size: 13px; font-weight: bold; }
-        .form-group input, .form-group select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
-        .btn-submit { background: #000; color: #fff; padding: 10px; border: none; border-radius: 4px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 10px; }
-    </style>
+    <link rel="stylesheet" href="../../assets/css/cinex.css">
 </head>
 <body>
 
 <!-- Cabecera -->
 <div class="header">
     <h2>Panel de Administración - Cinex+</h2>
-    <a href="../../auth/logout.php" class="btn-logout">Cerrar Sesión</a>
+    <form action="../../auth/logout.php" method="POST">
+        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(token_csrf(), ENT_QUOTES, 'UTF-8'); ?>">
+        <button type="submit" class="btn-logout">Cerrar Sesión</button>
+    </form>
 </div>
 
 <!-- Tarjetas de Acceso Rápido a Módulos -->
@@ -155,10 +67,26 @@ try {
         <p>Configurar salas por sucursal</p>
     </a>
 
-    <a href="crud_peliculas.php" class="card-module peliculas" style="border-left-color: #6f42c1;">
-    <h4>🎬 Películas</h4>
-    <p>Catálogo de películas y sinopsis</p>
-</a>
+    <a href="crud_peliculas.php" class="card-module peliculas">
+        <h4>🎬 Películas</h4>
+        <p>Catálogo de películas y sinopsis</p>
+    </a>
+    <a href="crud_pases.php" class="card-module">
+        <h4>🗓️ Programación</h4>
+        <p>Crear y administrar funciones</p>
+    </a>
+    <a href="crud_precios.php" class="card-module">
+        <h4>💳 Precios</h4>
+        <p>Configurar tarifas en COP por cine</p>
+    </a>
+    <a href="beneficios.php" class="card-module">
+        <h4>🎟️ Solicitudes de descuentos<?php if ($solicitudesBeneficioPendientes): ?> · <?php echo $solicitudesBeneficioPendientes; ?> pendientes<?php endif; ?></h4>
+        <p>Revisar soportes de elegibilidad de clientes</p>
+    </a>
+    <a href="recuperaciones.php" class="card-module">
+        <h4>🔐 Recuperar cuentas<?php if ($recuperacionesPendientes): ?> · <?php echo $recuperacionesPendientes; ?> pendientes<?php endif; ?></h4>
+        <p>Generar un enlace seguro si el correo no está configurado</p>
+    </a>
 </div>
 
 <!-- Gestión de Usuarios -->
@@ -188,14 +116,14 @@ try {
                 <td><?php echo htmlspecialchars($user['rol_nombre'], ENT_QUOTES, 'UTF-8'); ?></td>
                 <td><?php echo $user['activo'] === '1' ? 'Activo' : 'Inactivo'; ?></td>
                 <td>
-                    <button onclick="abrirModalEditar(
-                        <?php echo (int)$user['cod_usuario']; ?>, 
-                        '<?php echo htmlspecialchars($user['nombre'], ENT_QUOTES, 'UTF-8'); ?>',
-                        '<?php echo htmlspecialchars($user['apellidos'], ENT_QUOTES, 'UTF-8'); ?>',
-                        '<?php echo htmlspecialchars($user['email'], ENT_QUOTES, 'UTF-8'); ?>',
-                        '<?php echo htmlspecialchars($user['telefono'] ?? '', ENT_QUOTES, 'UTF-8'); ?>',
-                        <?php echo (int)$user['cod_rol']; ?>
-                    )" class="btn-action btn-edit">✏️ Editar</button>
+                    <button type="button" class="btn-action btn-edit edit-user"
+                        data-id="<?php echo (int) $user['cod_usuario']; ?>"
+                        data-nombre="<?php echo htmlspecialchars($user['nombre'], ENT_QUOTES, 'UTF-8'); ?>"
+                        data-apellidos="<?php echo htmlspecialchars($user['apellidos'], ENT_QUOTES, 'UTF-8'); ?>"
+                        data-email="<?php echo htmlspecialchars($user['email'], ENT_QUOTES, 'UTF-8'); ?>"
+                        data-telefono="<?php echo htmlspecialchars($user['telefono'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
+                        data-rol="<?php echo (int) $user['cod_rol']; ?>"
+                        data-cine="<?php echo (int) ($user['cod_cine'] ?? 0); ?>">✏️ Editar</button>
                     
                     <?php if ((int)$user['cod_usuario'] !== (int)$_SESSION['usuario_id']): ?>
                         <button onclick="confirmarEliminacion(<?php echo (int)$user['cod_usuario']; ?>)" class="btn-action btn-delete">🗑️ Eliminar</button>
@@ -215,18 +143,29 @@ try {
             <span class="close" onclick="cerrarModalCrear()">&times;</span>
         </div>
         <form action="../../auth/create_user.php" method="POST">
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(token_csrf(), ENT_QUOTES, 'UTF-8'); ?>">
             <div class="form-group"><label>Nombre:</label><input type="text" name="nombre" required></div>
             <div class="form-group"><label>Apellidos:</label><input type="text" name="apellidos" required></div>
             <div class="form-group"><label>Email:</label><input type="email" name="email" required></div>
             <div class="form-group"><label>Teléfono:</label><input type="text" name="telefono"></div>
-            <div class="form-group"><label>Contraseña:</label><input type="password" name="password" required></div>
+            <div class="form-group"><label>Contraseña</label><input type="password" name="password" minlength="8" autocomplete="new-password" required><small>8 caracteres como mínimo, mayúscula, minúscula, número y símbolo; sin espacios, patrones simples ni datos personales.</small></div>
             <div class="form-group">
                 <label>Rol:</label>
-                <select name="rol" required>
+                <select name="rol" id="createRole" required onchange="actualizarCampoCine('createRole', 'createCinemaGroup')">
                     <option value="3">Cliente</option>
                     <option value="2">Empleado</option>
                     <option value="1">Administrador</option>
                 </select>
+            </div>
+            <div class="form-group" id="createCinemaGroup" hidden>
+                <label for="createCinema">Cine asignado:</label>
+                <select name="cod_cine" id="createCinema">
+                    <option value="">Selecciona un cine</option>
+                    <?php foreach ($cines as $cine): ?>
+                        <option value="<?php echo (int)$cine['cod_cine']; ?>"><?php echo htmlspecialchars($cine['nombre'], ENT_QUOTES, 'UTF-8'); ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <?php if (!$cines): ?><small>Registra un cine antes de crear empleados o administradores locales.</small><?php endif; ?>
             </div>
             <button type="submit" class="btn-submit">Guardar Usuario</button>
         </form>
@@ -241,6 +180,7 @@ try {
             <span class="close" onclick="cerrarModalEditar()">&times;</span>
         </div>
         <form action="../../auth/update_user.php" method="POST">
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(token_csrf(), ENT_QUOTES, 'UTF-8'); ?>">
             <input type="hidden" name="edit_id" id="edit_id">
             <div class="form-group"><label>Nombre:</label><input type="text" name="edit_nombre" id="edit_nombre" required></div>
             <div class="form-group"><label>Apellidos:</label><input type="text" name="edit_apellidos" id="edit_apellidos" required></div>
@@ -248,32 +188,66 @@ try {
             <div class="form-group"><label>Teléfono:</label><input type="text" name="edit_telefono" id="edit_telefono"></div>
             <div class="form-group">
                 <label>Rol:</label>
-                <select name="edit_rol" id="edit_rol" required>
+                <select name="edit_rol" id="edit_rol" required onchange="actualizarCampoCine('edit_rol', 'editCinemaGroup')">
                     <option value="3">Cliente</option>
                     <option value="2">Empleado</option>
                     <option value="1">Administrador</option>
                 </select>
             </div>
-            <button type="submit" class="btn-submit" style="background:#007bff;">Actualizar Datos</button>
+            <div class="form-group" id="editCinemaGroup" hidden>
+                <label for="edit_cine">Cine asignado:</label>
+                <select name="edit_cod_cine" id="edit_cine">
+                    <option value="">Selecciona un cine</option>
+                    <?php foreach ($cines as $cine): ?>
+                        <option value="<?php echo (int)$cine['cod_cine']; ?>"><?php echo htmlspecialchars($cine['nombre'], ENT_QUOTES, 'UTF-8'); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <button type="submit" class="btn-submit btn-update">Actualizar Datos</button>
         </form>
     </div>
 </div>
 
 <script>
+    const csrfToken = <?php echo json_encode(token_csrf()); ?>;
     const modalC = document.getElementById("modalCrear");
     const modalE = document.getElementById("modalEditar");
 
-    function abrirModalCrear() { modalC.style.display = "flex"; }
+    function abrirModalCrear() {
+        modalC.style.display = "flex";
+        actualizarCampoCine('createRole', 'createCinemaGroup');
+    }
     function cerrarModalCrear() { modalC.style.display = "none"; }
 
-    function abrirModalEditar(id, nombre, apellidos, email, telefono, rol) {
+    function abrirModalEditar(id, nombre, apellidos, email, telefono, rol, cine) {
         document.getElementById('edit_id').value = id;
         document.getElementById('edit_nombre').value = nombre;
         document.getElementById('edit_apellidos').value = apellidos;
         document.getElementById('edit_email').value = email;
         document.getElementById('edit_telefono').value = telefono;
         document.getElementById('edit_rol').value = rol;
+        document.getElementById('edit_cine').value = cine || '';
+        actualizarCampoCine('edit_rol', 'editCinemaGroup');
         modalE.style.display = "flex";
+    }
+    document.querySelectorAll('.edit-user').forEach(button => button.addEventListener('click', () => {
+        abrirModalEditar(
+            button.dataset.id,
+            button.dataset.nombre,
+            button.dataset.apellidos,
+            button.dataset.email,
+            button.dataset.telefono,
+            button.dataset.rol,
+            button.dataset.cine
+        );
+    }));
+    function actualizarCampoCine(selectId, groupId) {
+        const role = document.getElementById(selectId).value;
+        const group = document.getElementById(groupId);
+        const cine = group.querySelector('select');
+        const required = role === '1' || role === '2';
+        group.hidden = !required;
+        cine.required = required;
     }
     function cerrarModalEditar() { modalE.style.display = "none"; }
     
@@ -294,7 +268,12 @@ try {
             cancelButtonText: 'Cancelar'
         }).then((result) => {
             if (result.isConfirmed) {
-                window.location.href = `../../auth/delete_user.php?id=${id}`;
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '../../auth/delete_user.php';
+                form.innerHTML = `<input type="hidden" name="id" value="${id}"><input type="hidden" name="csrf_token" value="${csrfToken}">`;
+                document.body.appendChild(form);
+                form.submit();
             }
         });
     }
@@ -305,6 +284,10 @@ try {
         else if(mensaje === 'error_self') Swal.fire('Error', 'No puedes eliminar tu propia cuenta.', 'error');
         else if(mensaje === 'created') Swal.fire('¡Éxito!', 'El usuario se registró correctamente.', 'success');
         else if(mensaje === 'updated') Swal.fire('¡Actualizado!', 'Los datos fueron modificados.', 'success');
+        else if(mensaje === 'error_update') Swal.fire('No se pudo actualizar', 'Verifica que el correo no esté en uso y que el cine asignado sea válido.', 'error');
+        else if(mensaje === 'duplicate_email') Swal.fire('Correo ya registrado', 'Usa un correo que no pertenezca a otra cuenta.', 'warning');
+        else if(mensaje === 'invalid_cinema') Swal.fire('Cine no válido', 'Selecciona un cine activo para este rol.', 'warning');
+        else if(mensaje === 'error_create') Swal.fire('No se pudo crear', 'Verifica los datos y la política de contraseña.', 'error');
         else if(mensaje === 'error_db') Swal.fire('Error', 'No se pudo procesar la solicitud.', 'error');
         window.history.replaceState(null, null, window.location.pathname);
     <?php endif; ?>

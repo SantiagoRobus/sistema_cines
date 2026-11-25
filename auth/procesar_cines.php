@@ -1,35 +1,41 @@
 <?php
-session_start();
+require_once '../config/seguridad.php';
+iniciar_sesion_segura();
 require_once '../config/conexion.php';
 
 // Validar que el usuario sea administrador (Rol 1)
-if (!isset($_SESSION['rol_id']) || $_SESSION['rol_id'] != 1) {
+if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($_SESSION['rol_id']) || (int) $_SESSION['rol_id'] !== 1) {
     header("Location: ../views/public/login.php");
     exit();
 }
+verificar_token_csrf();
 
-$accion = $_POST['accion'] ?? $_GET['accion'] ?? '';
-$id = $_POST['id'] ?? $_GET['id'] ?? null;
+$accion = post_texto('accion');
+$id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
 
-$nombre = trim($_POST['nombre'] ?? '');
-$calle = trim($_POST['calle'] ?? '');
-$numero = trim($_POST['numero'] ?? '');
-$telefono = trim($_POST['telefono'] ?? '');
+$nombre = post_texto('nombre');
+$calle = post_texto('calle');
+$numero = post_texto('numero');
+$telefono = post_texto('telefono');
 
 try {
     if ($accion === 'crear') {
+        if ($nombre === '' || $calle === '' || $numero === '') {
+            header("Location: ../views/admin/crud_cines.php?msg=error");
+            exit();
+        }
         $sql = "INSERT INTO CINE (nombre, calle, numero, telefono, activo) VALUES (:nombre, :calle, :numero, :telefono, '1')";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([':nombre' => $nombre, ':calle' => $calle, ':numero' => $numero, ':telefono' => $telefono]);
         header("Location: ../views/admin/crud_cines.php?msg=creado");
         
-    } elseif ($accion === 'editar' && $id) {
+    } elseif ($accion === 'editar' && $id && $id > 0 && $nombre !== '' && $calle !== '' && $numero !== '') {
         $sql = "UPDATE CINE SET nombre = :nombre, calle = :calle, numero = :numero, telefono = :telefono WHERE cod_cine = :id";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([':nombre' => $nombre, ':calle' => $calle, ':numero' => $numero, ':telefono' => $telefono, ':id' => $id]);
         header("Location: ../views/admin/crud_cines.php?msg=editado");
         
-    } elseif ($accion === 'eliminar' && $id) {
+    } elseif ($accion === 'eliminar' && $id && $id > 0) {
         $sql = "DELETE FROM CINE WHERE cod_cine = :id";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([':id' => $id]);
@@ -39,7 +45,7 @@ try {
         header("Location: ../views/admin/crud_cines.php?msg=error");
     }
 } catch (PDOException $e) {
-    // Si hay un error (por ejemplo, si el cine ya tiene salas o empleados asignados)
+    error_log('No se pudo procesar el cine: ' . $e->getMessage());
     header("Location: ../views/admin/crud_cines.php?msg=error_db");
 }
 exit();

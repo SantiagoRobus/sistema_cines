@@ -1,15 +1,17 @@
 <?php
-session_start();
+require_once '../config/seguridad.php';
+iniciar_sesion_segura();
 require_once '../config/conexion.php';
 
 // 1. VERIFICACIÓN DE SEGURIDAD: Solo administradores (Rol 1)
-if (!isset($_SESSION['rol_id']) || (int)$_SESSION['rol_id'] !== 1) {
+if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($_SESSION['rol_id']) || (int) $_SESSION['rol_id'] !== 1) {
     header("Location: ../views/public/login.php");
     exit();
 }
+verificar_token_csrf();
 
 // 2. SANITIZACIÓN: Obtener e hiper-validar que el parámetro ID sea estrictamente un entero positivo
-$id_eliminar = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
+$id_eliminar = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
 
 if ($id_eliminar && $id_eliminar > 0) {
     
@@ -27,7 +29,7 @@ if ($id_eliminar && $id_eliminar > 0) {
         header("Location: ../views/admin/dashboard_admin.php?msg=deleted");
         exit();
     } catch (PDOException $e) {
-        // Retornar error controlado sin exponer detalles de la BD
+        error_log('No se pudo eliminar el usuario: ' . $e->getMessage());
         header("Location: ../views/admin/dashboard_admin.php?msg=error_db");
         exit();
     }

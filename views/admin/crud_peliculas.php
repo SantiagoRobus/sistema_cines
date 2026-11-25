@@ -1,9 +1,7 @@
 <?php
-session_start();
-if (!isset($_SESSION['rol_id']) || (int)$_SESSION['rol_id'] !== 1) {
-    header("Location: ../public/login.php");
-    exit();
-}
+require_once '../../config/seguridad.php';
+iniciar_sesion_segura();
+exigir_rol([1], '../public/login.php');
 
 require_once '../../config/conexion.php';
 
@@ -27,30 +25,10 @@ try {
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestión de Películas - Cinex+</title>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <style>
-        body { font-family: 'Segoe UI', sans-serif; background-color: #2c2c2c; color: #333; margin: 0; padding: 20px; }
-        .header { display: flex; justify-content: space-between; align-items: center; background: #000; color: #fff; padding: 15px 25px; border-radius: 8px; margin-bottom: 25px; }
-        .container { background: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; font-size: 14px; }
-        th { background-color: #f8f9fa; }
-        .btn-add { background: #28a745; color: #fff; padding: 10px 16px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
-        .btn-action { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; color: #fff; font-size: 12px; margin-right: 4px; }
-        .btn-edit { background: #007bff; }
-        .btn-delete { background: #dc3545; }
-        .btn-back { background: #555; color: #fff; text-decoration: none; padding: 8px 16px; border-radius: 4px; font-size: 14px; }
-
-        .modal { display: none; position: fixed; z-index: 10; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); justify-content: center; align-items: center; }
-        .modal-content { background-color: #fff; padding: 25px; border-radius: 8px; width: 420px; }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .close { color: #aaa; font-size: 24px; cursor: pointer; font-weight: bold; }
-        .form-group { margin-bottom: 12px; display: flex; flex-direction: column; }
-        .form-group label { margin-bottom: 4px; font-size: 13px; font-weight: bold; }
-        .form-group input, .form-group select, .form-group textarea { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
-        .btn-submit { background: #000; color: #fff; padding: 10px; border: none; border-radius: 4px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 10px; }
-    </style>
+    <link rel="stylesheet" href="../../assets/css/cinex.css">
 </head>
 <body>
 
@@ -63,7 +41,7 @@ try {
     <?php if (count($generos) > 0): ?>
         <button class="btn-add" onclick="abrirModalCrear()">+ Registrar Nueva Película</button>
     <?php else: ?>
-        <p style="color: red;"><strong>Aviso:</strong> Debes registrar al menos un Género en el catálogo antes de agregar películas.</p>
+        <p class="notice"><strong>Aviso:</strong> Debes registrar al menos un Género en el catálogo antes de agregar películas.</p>
     <?php endif; ?>
 
     <table>
@@ -86,13 +64,12 @@ try {
                 <td><?php echo (int)$p['duracion_min']; ?> min</td>
                 <td><?php echo htmlspecialchars($p['sinopsis'], ENT_QUOTES, 'UTF-8'); ?></td>
                 <td>
-                    <button class="btn-action btn-edit" onclick="abrirModalEditar(
-                        <?php echo (int)$p['cod_pelicula']; ?>,
-                        '<?php echo htmlspecialchars($p['titulo'], ENT_QUOTES, 'UTF-8'); ?>',
-                        <?php echo (int)$p['duracion_min']; ?>,
-                        '<?php echo htmlspecialchars($p['sinopsis'], ENT_QUOTES, 'UTF-8'); ?>',
-                        <?php echo (int)$p['cod_genero']; ?>
-                    )">✏️ Editar</button>
+                    <button type="button" class="btn-action btn-edit edit-movie"
+                        data-id="<?php echo (int) $p['cod_pelicula']; ?>"
+                        data-titulo="<?php echo htmlspecialchars($p['titulo'], ENT_QUOTES, 'UTF-8'); ?>"
+                        data-duracion="<?php echo (int) $p['duracion_min']; ?>"
+                        data-sinopsis="<?php echo htmlspecialchars($p['sinopsis'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
+                        data-genero="<?php echo (int) $p['cod_genero']; ?>">✏️ Editar</button>
                     <button class="btn-action btn-delete" onclick="confirmarEliminacion(<?php echo (int)$p['cod_pelicula']; ?>)">🗑️ Eliminar</button>
                 </td>
             </tr>
@@ -109,6 +86,7 @@ try {
             <span class="close" onclick="cerrarModal('modalCrear')">&times;</span>
         </div>
         <form action="../../auth/procesar_peliculas.php" method="POST">
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(token_csrf(), ENT_QUOTES, 'UTF-8'); ?>">
             <input type="hidden" name="accion" value="crear">
             <div class="form-group"><label>Título:</label><input type="text" name="titulo" required></div>
             <div class="form-group">
@@ -121,7 +99,7 @@ try {
                 </select>
             </div>
             <div class="form-group"><label>Duración (Minutos):</label><input type="number" name="duracion_min" required min="1"></div>
-            <div class="form-group"><label>Sinopsis:</label><textarea name="sinopsis" rows="3" required></textarea></div>
+            <div class="form-group"><label>Sinopsis:</label><textarea name="sinopsis" rows="3"></textarea></div>
             <button type="submit" class="btn-submit">Guardar Película</button>
         </form>
     </div>
@@ -135,6 +113,7 @@ try {
             <span class="close" onclick="cerrarModal('modalEditar')">&times;</span>
         </div>
         <form action="../../auth/procesar_peliculas.php" method="POST">
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(token_csrf(), ENT_QUOTES, 'UTF-8'); ?>">
             <input type="hidden" name="accion" value="editar">
             <input type="hidden" name="id" id="idEditar">
             <div class="form-group"><label>Título:</label><input type="text" name="titulo" id="tituloEditar" required></div>
@@ -147,13 +126,14 @@ try {
                 </select>
             </div>
             <div class="form-group"><label>Duración (Minutos):</label><input type="number" name="duracion_min" id="duracionEditar" required min="1"></div>
-            <div class="form-group"><label>Sinopsis:</label><textarea name="sinopsis" id="sinopsisEditar" rows="3" required></textarea></div>
-            <button type="submit" class="btn-submit" style="background:#007bff;">Actualizar Película</button>
+            <div class="form-group"><label>Sinopsis:</label><textarea name="sinopsis" id="sinopsisEditar" rows="3"></textarea></div>
+            <button type="submit" class="btn-submit btn-update">Actualizar Película</button>
         </form>
     </div>
 </div>
 
 <script>
+    const csrfToken = <?php echo json_encode(token_csrf()); ?>;
     function abrirModalCrear() { document.getElementById('modalCrear').style.display = "flex"; }
     function abrirModalEditar(id, titulo, duracion, sinopsis, codGenero) {
         document.getElementById('modalEditar').style.display = "flex";
@@ -163,6 +143,9 @@ try {
         document.getElementById('sinopsisEditar').value = sinopsis;
         document.getElementById('generoEditar').value = codGenero;
     }
+    document.querySelectorAll('.edit-movie').forEach(button => button.addEventListener('click', () => {
+        abrirModalEditar(button.dataset.id, button.dataset.titulo, button.dataset.duracion, button.dataset.sinopsis, button.dataset.genero);
+    }));
     function cerrarModal(id) { document.getElementById(id).style.display = "none"; }
 
     function confirmarEliminacion(id) {
@@ -175,7 +158,12 @@ try {
             confirmButtonText: 'Sí, eliminar'
         }).then((result) => {
             if (result.isConfirmed) {
-                window.location.href = `../../auth/procesar_peliculas.php?accion=eliminar&id=${id}`;
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '../../auth/procesar_peliculas.php';
+                form.innerHTML = `<input type="hidden" name="accion" value="eliminar"><input type="hidden" name="id" value="${id}"><input type="hidden" name="csrf_token" value="${csrfToken}">`;
+                document.body.appendChild(form);
+                form.submit();
             }
         });
     }
