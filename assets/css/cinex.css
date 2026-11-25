@@ -652,3 +652,115 @@ tbody tr:last-child td {
         transition-duration: .01ms !important;
     }
 }
+
+.report-filters {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    align-items: end;
+    gap: 14px;
+    margin-bottom: 22px;
+    padding: 18px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface-raised);
+}
+
+.report-filters .form-group {
+    margin: 0;
+}
+
+.report-filters input,
+.report-filters select {
+    width: 100%;
+}
+
+.report-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+}
+
+.report-actions .btn-submit,
+.report-actions .btn-back {
+    margin: 0;
+}
+
+.report-date[hidden] {
+    display: none;
+}
+
+.report-period {
+    color: var(--muted);
+}
+
+.report-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
+    margin: 20px 0 28px;
+}
+
+.report-summary article {
+    display: grid;
+    gap: 8px;
+    padding: 18px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface-raised);
+}
+
+.report-summary span {
+    color: var(--muted);
+    font-size: .85rem;
+}
+
+.report-summary strong {
+    color: var(--accent-strong);
+    font-size: 1.25rem;
+}
+
+.report-table {
+    overflow-x: auto;
+}
+
+@media print {
+    body {
+        padding: 0;
+        color: #111;
+        background: #fff;
+    }
+
+    .report-header .btn-back,
+    .report-filters,
+    .report-table {
+        break-inside: avoid;
+    }
+
+    .report-filters,
+    .report-header .btn-back,
+    .report-actions,
+    .header .btn-back {
+        display: none !important;
+    }
+
+    .container,
+    .report-summary article {
+        border: 1px solid #ccc;
+        box-shadow: none;
+        background: #fff;
+        color: #111;
+    }
+
+    table {
+        min-width: 0;
+        color: #111;
+        font-size: 9pt;
+    }
+
+    th,
+    td {
+        padding: 6px;
+        color: #111;
+    }
+}

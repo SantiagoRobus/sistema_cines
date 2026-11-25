@@ -10,7 +10,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($_SESSION['rol_id']) || (int
 }
 verificar_token_csrf();
 
-// Recibir los parámetros (ya sea por POST desde los formularios o por GET desde SweetAlert2)
+// Recibir parámetros de los formularios administrativos.
 $accion = post_texto('accion');
 $tabla = post_texto('tabla');
 $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
@@ -27,6 +27,18 @@ if ($tabla === 'genero') {
     $nombreTablaDB = 'TARIFA';
     $columnaId = 'cod_tarifa';
     $columnaValor = 'descripcion';
+} elseif ($tabla === 'clasificacion') {
+    $nombreTablaDB = 'CLASIFICACION';
+    $columnaId = 'cod_clasif';
+    $columnaValor = 'descripcion';
+} elseif ($tabla === 'director') {
+    $nombreTablaDB = 'DIRECTOR';
+    $columnaId = 'cod_director';
+    $columnaValor = 'nombre';
+} elseif ($tabla === 'actor') {
+    $nombreTablaDB = 'ACTOR';
+    $columnaId = 'cod_actor';
+    $columnaValor = 'nombre';
 } else {
     // Si la tabla no es válida, regresamos con error
     header("Location: ../views/admin/crud_catalogos.php?msg=error");
@@ -40,8 +52,8 @@ try {
             exit();
         }
         $sql = $tabla === 'tarifa'
-            ? "INSERT INTO TARIFA ($columnaValor, beneficio_requerido) VALUES (:valor, :beneficio)"
-            : "INSERT INTO GENERO ($columnaValor) VALUES (:valor)";
+            ? "INSERT INTO $nombreTablaDB ($columnaValor, beneficio_requerido) VALUES (:valor, :beneficio)"
+            : "INSERT INTO $nombreTablaDB ($columnaValor) VALUES (:valor)";
         $stmt = $pdo->prepare($sql);
         $parametros = [':valor' => $valor];
         if ($tabla === 'tarifa') {
@@ -56,8 +68,8 @@ try {
             exit();
         }
         $sql = $tabla === 'tarifa'
-            ? "UPDATE TARIFA SET $columnaValor = :valor, beneficio_requerido = :beneficio WHERE $columnaId = :id"
-            : "UPDATE GENERO SET $columnaValor = :valor WHERE $columnaId = :id";
+            ? "UPDATE $nombreTablaDB SET $columnaValor = :valor, beneficio_requerido = :beneficio WHERE $columnaId = :id"
+            : "UPDATE $nombreTablaDB SET $columnaValor = :valor WHERE $columnaId = :id";
         $stmt = $pdo->prepare($sql);
         $parametros = [':valor' => $valor, ':id' => $id];
         if ($tabla === 'tarifa') {
@@ -65,12 +77,6 @@ try {
         }
         $stmt->execute($parametros);
         header("Location: ../views/admin/crud_catalogos.php?msg=editado");
-        
-    } elseif ($accion === 'eliminar' && $id && $id > 0) {
-        $sql = "DELETE FROM $nombreTablaDB WHERE $columnaId = :id";
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute([':id' => $id]);
-        header("Location: ../views/admin/crud_catalogos.php?msg=eliminado");
         
     } else {
         header("Location: ../views/admin/crud_catalogos.php?msg=error");

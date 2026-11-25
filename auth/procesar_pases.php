@@ -19,18 +19,6 @@ $fecha = $_POST['fecha'] ?? '';
 $hora = $_POST['hora'] ?? '';
 $matinal = $_POST['matinal'] ?? 'N';
 
-if ($accion === 'eliminar' && $id && $id > 0) {
-    try {
-        $stmt = $pdo->prepare('DELETE FROM PASE WHERE cod_pase = :id');
-        $stmt->execute([':id' => $id]);
-        header('Location: ../views/admin/crud_pases.php?msg=deleted');
-    } catch (PDOException $e) {
-        error_log('No se pudo eliminar el pase: ' . $e->getMessage());
-        header('Location: ../views/admin/crud_pases.php?msg=error');
-    }
-    exit();
-}
-
 $fechaValida = is_string($fecha) && preg_match('/\A\d{4}-\d{2}-\d{2}\z/', $fecha)
     && DateTimeImmutable::createFromFormat('!Y-m-d', $fecha)?->format('Y-m-d') === $fecha;
 $horaValida = is_string($hora) && preg_match('/\A(?:[01]\d|2[0-3]):[0-5]\d\z/', $hora);

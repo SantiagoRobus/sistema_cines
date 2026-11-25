@@ -18,23 +18,6 @@ $importe = is_string($importeRaw) && preg_match('/\A\d{1,8}(?:\.\d{1,2})?\z/', $
 $cineAnterior = filter_var($_POST['cine_anterior'] ?? null, FILTER_VALIDATE_INT);
 $tarifaAnterior = filter_var($_POST['tarifa_anterior'] ?? null, FILTER_VALIDATE_INT);
 
-if ($accion === 'eliminar') {
-    if (!$cine || !$tarifa) {
-        header('Location: ../views/admin/crud_precios.php?msg=invalid');
-        exit();
-    }
-
-    try {
-        $stmt = $pdo->prepare('DELETE FROM PRECIO WHERE cod_cine = :cine AND cod_tarifa = :tarifa');
-        $stmt->execute([':cine' => $cine, ':tarifa' => $tarifa]);
-        header('Location: ../views/admin/crud_precios.php?msg=deleted');
-    } catch (PDOException $e) {
-        error_log('No se pudo eliminar una tarifa de cine: ' . $e->getMessage());
-        header('Location: ../views/admin/crud_precios.php?msg=error');
-    }
-    exit();
-}
-
 if (!in_array($accion, ['crear', 'editar'], true) || !$cine || !$tarifa || $importe <= 0 || ($accion === 'editar' && (!$cineAnterior || !$tarifaAnterior))) {
     header('Location: ../views/admin/crud_precios.php?msg=invalid');
     exit();

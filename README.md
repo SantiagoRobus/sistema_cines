@@ -21,11 +21,13 @@ Esta primera entrega académica cubre el flujo completo de autenticación por ro
    - Control estricto de sesión y sanitización de parámetros en la URL contra manipulación de ID.
 
 3. **Gestión CRUD en Una Sola Página (Modales + SweetAlert2):**
-   - **CRUD de Usuarios:** Alta, edición y eliminación (con regla de negocio que impide al Administrador autoborrarse).
-   - **CRUD de Catálogos (`crud_catalogos.php`):** Control unificado para las tablas `GENERO` y `TARIFA`.
+   - **CRUD de Usuarios:** Alta y edición de usuarios y perfiles según rol.
+   - **CRUD de Catálogos (`crud_catalogos.php`):** Control de géneros, tarifas, clasificaciones, directores y actores.
    - **CRUD de Sucursales (`crud_cines.php`):** Registro de sedes físicas.
    - **CRUD de Salas (`crud_salas.php`):** Relación de salas por cine mediante menús desplegables (`<select>`) vinculados a PostgreSQL.
-   - **CRUD de Películas (`crud_peliculas.php`):** Gestión de catálogo de películas asociadas a géneros.
+   - **Reportes (`reportes.php`):** Resumen de reservas, entradas y recaudo, con detalle o top 10 de películas y filtros por periodo, estado, cliente, correo, película y cine.
+   - Los CRUD administrativos permiten crear y editar; no incluyen la acción de eliminar.
+   - **CRUD de Películas (`crud_peliculas.php`):** Gestión de películas, género, director, clasificación y reparto.
    - **Programación (`crud_pases.php`):** Administración de funciones por cine, sala, película, fecha y hora.
    - **Precios (`crud_precios.php`):** Configuración de tarifas por sede en pesos colombianos.
    - **Cartelera y reservas:** Selección de cine, información de contacto, búsqueda de películas, filtros de fecha, disponibilidad y pago confirmado desde el servidor mediante Mercado Pago Checkout Pro.

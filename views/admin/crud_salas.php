@@ -71,7 +71,6 @@ try {
                         <?php echo $s['capacidad']; ?>,
                         <?php echo $s['cod_cine']; ?>
                     )">✏️ Editar</button>
-                    <button class="btn-action btn-delete" onclick="confirmarEliminacion(<?php echo $s['cod_sala']; ?>)">🗑️ Eliminar</button>
                 </td>
             </tr>
             <?php endforeach; ?>
@@ -139,7 +138,6 @@ try {
 </div>
 
 <script>
-    const csrfToken = <?php echo json_encode(token_csrf()); ?>;
     function abrirModalCrear() {
         document.getElementById('modalCrear').style.display = "flex";
     }
@@ -156,32 +154,10 @@ try {
         document.getElementById(idModal).style.display = "none";
     }
 
-    function confirmarEliminacion(id) {
-        Swal.fire({
-            title: '¿Eliminar esta sala?',
-            text: "No podrás revertir esto.",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#dc3545',
-            confirmButtonText: 'Sí, eliminar'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = '../../auth/procesar_salas.php';
-                form.innerHTML = `<input type="hidden" name="accion" value="eliminar"><input type="hidden" name="id" value="${id}"><input type="hidden" name="csrf_token" value="${csrfToken}">`;
-                document.body.appendChild(form);
-                form.submit();
-            }
-        });
-    }
-
     <?php if(isset($_GET['msg'])): ?>
         const msg = "<?php echo $_GET['msg']; ?>";
         if(msg === 'creado') Swal.fire('¡Éxito!', 'La sala fue registrada.', 'success');
         if(msg === 'editado') Swal.fire('¡Actualizado!', 'Los datos de la sala fueron modificados.', 'success');
-        if(msg === 'eliminado') Swal.fire('¡Eliminado!', 'La sala fue borrada correctamente.', 'success');
-        if(msg === 'error_db') Swal.fire('Error', 'No se pudo eliminar la sala. Es posible que tenga horarios o reservas asociadas.', 'error');
         window.history.replaceState(null, null, window.location.pathname);
     <?php endif; ?>
 </script>

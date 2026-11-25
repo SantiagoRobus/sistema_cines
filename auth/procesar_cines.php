@@ -35,12 +35,6 @@ try {
         $stmt->execute([':nombre' => $nombre, ':calle' => $calle, ':numero' => $numero, ':telefono' => $telefono, ':id' => $id]);
         header("Location: ../views/admin/crud_cines.php?msg=editado");
         
-    } elseif ($accion === 'eliminar' && $id && $id > 0) {
-        $sql = "DELETE FROM CINE WHERE cod_cine = :id";
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute([':id' => $id]);
-        header("Location: ../views/admin/crud_cines.php?msg=eliminado");
-        
     } else {
         header("Location: ../views/admin/crud_cines.php?msg=error");
     }
