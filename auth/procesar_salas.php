@@ -31,12 +31,6 @@ try {
         $stmt->execute([':num' => $num_sala, ':cap' => $capacidad, ':cine' => $cod_cine, ':id' => $id]);
         header("Location: ../views/admin/crud_salas.php?msg=editado");
         
-    } elseif ($accion === 'eliminar' && $id && $id > 0) {
-        $sql = "DELETE FROM SALA WHERE cod_sala = :id";
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute([':id' => $id]);
-        header("Location: ../views/admin/crud_salas.php?msg=eliminado");
-        
     } else {
         header("Location: ../views/admin/crud_salas.php?msg=error");
     }

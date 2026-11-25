@@ -57,9 +57,6 @@ try {
                                 data-cine="<?php echo (int) $precio['cod_cine']; ?>"
                                 data-tarifa="<?php echo (int) $precio['cod_tarifa']; ?>"
                                 data-importe="<?php echo htmlspecialchars((string) $precio['importe'], ENT_QUOTES, 'UTF-8'); ?>">Editar</button>
-                            <button type="button" class="btn-action btn-delete delete-price"
-                                data-cine="<?php echo (int) $precio['cod_cine']; ?>"
-                                data-tarifa="<?php echo (int) $precio['cod_tarifa']; ?>">Eliminar</button>
                         </td>
                     </tr>
                 <?php endforeach; ?>
@@ -107,7 +104,6 @@ try {
     <script>
         const modal = document.getElementById('priceModal');
         const form = modal.querySelector('form');
-        const csrfToken = <?php echo json_encode(token_csrf()); ?>;
         const cinema = document.getElementById('cine');
         const fare = document.getElementById('tarifa');
 
@@ -132,28 +128,9 @@ try {
             modal.style.display = 'flex';
         }));
 
-        document.querySelectorAll('.delete-price').forEach(button => button.addEventListener('click', async () => {
-            const result = await Swal.fire({
-                title: '¿Eliminar este precio?',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonText: 'Eliminar',
-                cancelButtonText: 'Cancelar',
-                confirmButtonColor: '#ef6573'
-            });
-            if (!result.isConfirmed) return;
-            const deleteForm = document.createElement('form');
-            deleteForm.method = 'POST';
-            deleteForm.action = '../../auth/procesar_precios.php';
-            deleteForm.innerHTML = `<input name="csrf_token" type="hidden" value="${csrfToken}"><input name="accion" type="hidden" value="eliminar"><input name="cod_cine" type="hidden" value="${button.dataset.cine}"><input name="cod_tarifa" type="hidden" value="${button.dataset.tarifa}">`;
-            document.body.appendChild(deleteForm);
-            deleteForm.submit();
-        }));
-
         const messages = {
             saved: ['Precio guardado', 'La tarifa quedó disponible para las reservas.', 'success'],
             updated: ['Precio actualizado', 'Se guardaron los cambios.', 'success'],
-            deleted: ['Precio eliminado', 'Se retiró esta tarifa del cine.', 'success'],
             invalid: ['Datos inválidos', 'Completa los datos y verifica que el precio sea mayor a cero.', 'warning'],
             error: ['No se pudo guardar', 'Verifica que el cine y la tarifa sigan activos.', 'error']
         };

@@ -13,6 +13,9 @@ try {
 
     $stmtTarifas = $pdo->query("SELECT * FROM TARIFA ORDER BY cod_tarifa ASC");
     $tarifas = $stmtTarifas->fetchAll(PDO::FETCH_ASSOC);
+    $clasificaciones = $pdo->query("SELECT cod_clasif, descripcion FROM CLASIFICACION ORDER BY descripcion")->fetchAll(PDO::FETCH_ASSOC);
+    $directores = $pdo->query("SELECT cod_director, nombre FROM DIRECTOR ORDER BY nombre")->fetchAll(PDO::FETCH_ASSOC);
+    $actores = $pdo->query("SELECT cod_actor, nombre FROM ACTOR ORDER BY nombre")->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
     die("Error de base de datos: " . $e->getMessage());
 }
@@ -29,7 +32,7 @@ try {
 <body>
 
 <div class="header">
-    <h2>Gestión de Catálogos (Géneros y Tarifas)</h2>
+    <h2>Gestión de Catálogos</h2>
     <a href="dashboard_admin.php" class="btn-back">Volver al Panel</a>
 </div>
 
@@ -47,9 +50,7 @@ try {
                 <td><?php echo $g['cod_genero']; ?></td>
                 <td><?php echo htmlspecialchars($g['nombre']); ?></td>
                 <td>
-                    <!-- Botones con iconos para cumplir el Punto 7 -->
                     <button type="button" class="btn-action btn-edit edit-catalog" data-tabla="genero" data-id="<?php echo (int) $g['cod_genero']; ?>" data-valor="<?php echo htmlspecialchars($g['nombre'], ENT_QUOTES, 'UTF-8'); ?>">✏️ Editar</button>
-                    <button class="btn-action btn-delete" onclick="confirmarEliminacion('genero', <?php echo $g['cod_genero']; ?>)">🗑️ Eliminar</button>
                 </td>
             </tr>
             <?php endforeach; ?>
@@ -72,10 +73,63 @@ try {
                 <td><?php echo htmlspecialchars($t['descripcion']); ?></td>
                 <td>
                     <button type="button" class="btn-action btn-edit edit-catalog" data-tabla="tarifa" data-id="<?php echo (int) $t['cod_tarifa']; ?>" data-valor="<?php echo htmlspecialchars($t['descripcion'], ENT_QUOTES, 'UTF-8'); ?>" data-beneficio="<?php echo htmlspecialchars($t['beneficio_requerido'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">✏️ Editar</button>
-                    <button class="btn-action btn-delete" onclick="confirmarEliminacion('tarifa', <?php echo $t['cod_tarifa']; ?>)">🗑️ Eliminar</button>
                 </td>
             </tr>
             <?php endforeach; ?>
+        </tbody>
+    </table>
+</div>
+
+<div class="container">
+    <h3>Catálogo de Clasificaciones</h3>
+    <button class="btn-add" onclick="abrirModal('modalCrear', 'clasificacion')">+ Nueva Clasificación</button>
+    <table>
+        <thead><tr><th>ID</th><th>Clasificación</th><th>Acciones</th></tr></thead>
+        <tbody>
+            <?php foreach ($clasificaciones as $clasificacion): ?>
+            <tr>
+                <td><?php echo (int) $clasificacion['cod_clasif']; ?></td>
+                <td><?php echo htmlspecialchars($clasificacion['descripcion'], ENT_QUOTES, 'UTF-8'); ?></td>
+                <td><button type="button" class="btn-action btn-edit edit-catalog" data-tabla="clasificacion" data-id="<?php echo (int) $clasificacion['cod_clasif']; ?>" data-valor="<?php echo htmlspecialchars($clasificacion['descripcion'], ENT_QUOTES, 'UTF-8'); ?>">Editar</button></td>
+            </tr>
+            <?php endforeach; ?>
+            <?php if (!$clasificaciones): ?><tr><td colspan="3">No hay clasificaciones registradas.</td></tr><?php endif; ?>
+        </tbody>
+    </table>
+</div>
+
+<div class="container">
+    <h3>Catálogo de Directores</h3>
+    <button class="btn-add" onclick="abrirModal('modalCrear', 'director')">+ Nuevo Director</button>
+    <table>
+        <thead><tr><th>ID</th><th>Nombre</th><th>Acciones</th></tr></thead>
+        <tbody>
+            <?php foreach ($directores as $director): ?>
+            <tr>
+                <td><?php echo (int) $director['cod_director']; ?></td>
+                <td><?php echo htmlspecialchars($director['nombre'], ENT_QUOTES, 'UTF-8'); ?></td>
+                <td><button type="button" class="btn-action btn-edit edit-catalog" data-tabla="director" data-id="<?php echo (int) $director['cod_director']; ?>" data-valor="<?php echo htmlspecialchars($director['nombre'], ENT_QUOTES, 'UTF-8'); ?>">Editar</button></td>
+            </tr>
+            <?php endforeach; ?>
+            <?php if (!$directores): ?><tr><td colspan="3">No hay directores registrados.</td></tr><?php endif; ?>
+        </tbody>
+    </table>
+</div>
+
+<div class="container">
+    <h3>Catálogo de Actores</h3>
+    <button class="btn-add" onclick="abrirModal('modalCrear', 'actor')">+ Nuevo Actor</button>
+    <table>
+        <thead><tr><th>ID</th><th>Nombre</th><th>Acciones</th></tr></thead>
+        <tbody>
+            <?php foreach ($actores as $actor): ?>
+            <tr>
+                <td><?php echo (int) $actor['cod_actor']; ?></td>
+                <td><?php echo htmlspecialchars($actor['nombre'], ENT_QUOTES, 'UTF-8'); ?></td>
+                <td><button type="button" class="btn-action btn-edit edit-catalog" data-tabla="actor" data-id="<?php echo (int) $actor['cod_actor']; ?>" data-valor="<?php echo htmlspecialchars($actor['nombre'], ENT_QUOTES, 'UTF-8'); ?>">Editar</button></td>
+            </tr>
+            <?php endforeach; ?>
+            <?php if (!$actores): ?><tr><td colspan="3">No hay actores registrados.</td></tr><?php endif; ?>
         </tbody>
     </table>
 </div>
@@ -144,12 +198,20 @@ try {
 </div>
 
 <script>
-    const csrfToken = <?php echo json_encode(token_csrf()); ?>;
     // Funciones para abrir y cerrar modales dinámicamente
     function abrirModal(idModal, tabla) {
         document.getElementById(idModal).style.display = "flex";
         document.getElementById('tablaCrear').value = tabla;
-        document.getElementById('tituloCrear').innerText = tabla === 'genero' ? 'Crear Nuevo Género' : 'Crear Nueva Tarifa';
+        const catalogos = {
+            genero: ['Género', 'Nombre'],
+            tarifa: ['Tarifa', 'Descripción'],
+            clasificacion: ['Clasificación', 'Descripción'],
+            director: ['Director', 'Nombre'],
+            actor: ['Actor', 'Nombre']
+        };
+        const [etiqueta, campo] = catalogos[tabla];
+        document.getElementById('tituloCrear').innerText = `Crear ${etiqueta}`;
+        document.getElementById('labelCrear').innerText = `${campo}:`;
         document.getElementById('beneficioCrearGroup').hidden = tabla !== 'tarifa';
         document.getElementById('beneficioCrear').value = '';
     }
@@ -171,32 +233,11 @@ try {
         document.getElementById(idModal).style.display = "none";
     }
 
-    function confirmarEliminacion(tabla, id) {
-        Swal.fire({
-            title: '¿Eliminar registro?',
-            text: "No podrás revertir esto.",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#dc3545',
-            confirmButtonText: 'Sí, eliminar'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = '../../auth/procesar_catalogos.php';
-                form.innerHTML = `<input type="hidden" name="accion" value="eliminar"><input type="hidden" name="tabla" value="${tabla}"><input type="hidden" name="id" value="${id}"><input type="hidden" name="csrf_token" value="${csrfToken}">`;
-                document.body.appendChild(form);
-                form.submit();
-            }
-        });
-    }
-
     // Alertas de éxito o error
     <?php if(isset($_GET['msg'])): ?>
         const msg = "<?php echo $_GET['msg']; ?>";
         if(msg === 'creado') Swal.fire('¡Éxito!', 'Registro guardado.', 'success');
         if(msg === 'editado') Swal.fire('¡Actualizado!', 'Registro modificado.', 'success');
-        if(msg === 'eliminado') Swal.fire('¡Eliminado!', 'Registro borrado.', 'success');
         if(msg === 'error') Swal.fire('Error', 'No se pudo procesar la solicitud.', 'error');
         window.history.replaceState(null, null, window.location.pathname);
     <?php endif; ?>

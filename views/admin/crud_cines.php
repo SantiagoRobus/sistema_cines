@@ -55,7 +55,6 @@ try {
                         data-calle="<?php echo htmlspecialchars($c['calle'], ENT_QUOTES, 'UTF-8'); ?>"
                         data-numero="<?php echo htmlspecialchars($c['numero'], ENT_QUOTES, 'UTF-8'); ?>"
                         data-telefono="<?php echo htmlspecialchars($c['telefono'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">✏️ Editar</button>
-                    <button class="btn-action btn-delete" onclick="confirmarEliminacion(<?php echo $c['cod_cine']; ?>)">🗑️ Eliminar</button>
                 </td>
             </tr>
             <?php endforeach; ?>
@@ -103,7 +102,6 @@ try {
 </div>
 
 <script>
-    const csrfToken = <?php echo json_encode(token_csrf()); ?>;
     function abrirModalCrear() {
         document.getElementById('modalCrear').style.display = "flex";
     }
@@ -124,33 +122,11 @@ try {
         document.getElementById(idModal).style.display = "none";
     }
 
-    function confirmarEliminacion(id) {
-        Swal.fire({
-            title: '¿Eliminar esta sucursal?',
-            text: "No podrás revertir esto.",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#dc3545',
-            confirmButtonText: 'Sí, eliminar'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = '../../auth/procesar_cines.php';
-                form.innerHTML = `<input type="hidden" name="accion" value="eliminar"><input type="hidden" name="id" value="${id}"><input type="hidden" name="csrf_token" value="${csrfToken}">`;
-                document.body.appendChild(form);
-                form.submit();
-            }
-        });
-    }
-
     // Alertas de SweetAlert2
     <?php if(isset($_GET['msg'])): ?>
         const msg = "<?php echo $_GET['msg']; ?>";
         if(msg === 'creado') Swal.fire('¡Éxito!', 'La sucursal fue registrada.', 'success');
         if(msg === 'editado') Swal.fire('¡Actualizado!', 'Los datos del cine fueron modificados.', 'success');
-        if(msg === 'eliminado') Swal.fire('¡Eliminado!', 'El cine fue borrado correctamente.', 'success');
-        if(msg === 'error_db') Swal.fire('Error', 'No se pudo eliminar. Verifica que no haya salas o empleados asignados a este cine.', 'error');
         if(msg === 'error') Swal.fire('Error', 'Revisa los datos del cine e inténtalo de nuevo.', 'error');
         window.history.replaceState(null, null, window.location.pathname);
     <?php endif; ?>

@@ -71,7 +71,6 @@ try {
                                 data-fecha="<?php echo htmlspecialchars($pase['fecha'], ENT_QUOTES, 'UTF-8'); ?>"
                                 data-hora="<?php echo htmlspecialchars(substr($pase['hora'], 0, 5), ENT_QUOTES, 'UTF-8'); ?>"
                                 data-matinal="<?php echo htmlspecialchars($pase['matinal'] ?? 'N', ENT_QUOTES, 'UTF-8'); ?>">Editar</button>
-                            <button type="button" class="btn-action btn-delete delete-showtime" data-id="<?php echo (int) $pase['cod_pase']; ?>">Eliminar</button>
                         </td>
                     </tr>
                 <?php endforeach; ?>
@@ -135,7 +134,6 @@ try {
         const form = modal.querySelector('form');
         const cinema = document.getElementById('cine');
         const room = document.getElementById('sala');
-        const csrfToken = <?php echo json_encode(token_csrf()); ?>;
 
         function filterRooms(selectedRoom = '') {
             const cinemaId = cinema.value;
@@ -172,31 +170,10 @@ try {
             modal.style.display = 'flex';
         }));
 
-        document.querySelectorAll('.delete-showtime').forEach(button => button.addEventListener('click', async () => {
-            const result = await Swal.fire({
-                title: '¿Eliminar esta función?',
-                text: 'No se puede eliminar si ya tiene reservas.',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonText: 'Eliminar',
-                cancelButtonText: 'Cancelar',
-                confirmButtonColor: '#ef6573'
-            });
-            if (!result.isConfirmed) return;
-
-            const deleteForm = document.createElement('form');
-            deleteForm.method = 'POST';
-            deleteForm.action = '../../auth/procesar_pases.php';
-            deleteForm.innerHTML = `<input name="csrf_token" type="hidden" value="${csrfToken}"><input name="accion" type="hidden" value="eliminar"><input name="id" type="hidden" value="${button.dataset.id}">`;
-            document.body.appendChild(deleteForm);
-            deleteForm.submit();
-        }));
-
         const msg = new URLSearchParams(location.search).get('msg');
         const messages = {
             created: ['Función programada', 'La función quedó disponible en la cartelera.', 'success'],
             updated: ['Función actualizada', 'Se guardaron los cambios.', 'success'],
-            deleted: ['Función eliminada', 'La función fue retirada.', 'success'],
             invalid: ['Revisa los datos', 'Selecciona un cine, sala y película válidos y una fecha correcta.', 'warning'],
             error: ['No se pudo guardar', 'Verifica que la función no tenga reservas y que los datos sean correctos.', 'error']
         };

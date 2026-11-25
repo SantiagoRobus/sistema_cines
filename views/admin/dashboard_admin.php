@@ -79,6 +79,10 @@ try {
         <h4>💳 Precios</h4>
         <p>Configurar tarifas en COP por cine</p>
     </a>
+    <a href="reportes.php" class="card-module">
+        <h4>📊 Reportes</h4>
+        <p>Consultar reservas, ventas y películas por periodo</p>
+    </a>
     <a href="beneficios.php" class="card-module">
         <h4>🎟️ Solicitudes de descuentos<?php if ($solicitudesBeneficioPendientes): ?> · <?php echo $solicitudesBeneficioPendientes; ?> pendientes<?php endif; ?></h4>
         <p>Revisar soportes de elegibilidad de clientes</p>
@@ -124,10 +128,6 @@ try {
                         data-telefono="<?php echo htmlspecialchars($user['telefono'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
                         data-rol="<?php echo (int) $user['cod_rol']; ?>"
                         data-cine="<?php echo (int) ($user['cod_cine'] ?? 0); ?>">✏️ Editar</button>
-                    
-                    <?php if ((int)$user['cod_usuario'] !== (int)$_SESSION['usuario_id']): ?>
-                        <button onclick="confirmarEliminacion(<?php echo (int)$user['cod_usuario']; ?>)" class="btn-action btn-delete">🗑️ Eliminar</button>
-                    <?php endif; ?>
                 </td>
             </tr>
             <?php endforeach; ?>
@@ -209,7 +209,6 @@ try {
 </div>
 
 <script>
-    const csrfToken = <?php echo json_encode(token_csrf()); ?>;
     const modalC = document.getElementById("modalCrear");
     const modalE = document.getElementById("modalEditar");
 
@@ -256,33 +255,9 @@ try {
         if (event.target == modalE) cerrarModalEditar();
     }
 
-    function confirmarEliminacion(id) {
-        Swal.fire({
-            title: '¿Estás seguro?',
-            text: "¡No podrás revertir esta acción!",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#dc3545',
-            cancelButtonColor: '#6c757d',
-            confirmButtonText: 'Sí, eliminar',
-            cancelButtonText: 'Cancelar'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = '../../auth/delete_user.php';
-                form.innerHTML = `<input type="hidden" name="id" value="${id}"><input type="hidden" name="csrf_token" value="${csrfToken}">`;
-                document.body.appendChild(form);
-                form.submit();
-            }
-        });
-    }
-
     <?php if(isset($_GET['msg'])): ?>
         const mensaje = "<?php echo htmlspecialchars($_GET['msg'], ENT_QUOTES, 'UTF-8'); ?>";
-        if(mensaje === 'deleted') Swal.fire('¡Eliminado!', 'El usuario ha sido borrado.', 'success');
-        else if(mensaje === 'error_self') Swal.fire('Error', 'No puedes eliminar tu propia cuenta.', 'error');
-        else if(mensaje === 'created') Swal.fire('¡Éxito!', 'El usuario se registró correctamente.', 'success');
+        if(mensaje === 'created') Swal.fire('¡Éxito!', 'El usuario se registró correctamente.', 'success');
         else if(mensaje === 'updated') Swal.fire('¡Actualizado!', 'Los datos fueron modificados.', 'success');
         else if(mensaje === 'error_update') Swal.fire('No se pudo actualizar', 'Verifica que el correo no esté en uso y que el cine asignado sea válido.', 'error');
         else if(mensaje === 'duplicate_email') Swal.fire('Correo ya registrado', 'Usa un correo que no pertenezca a otra cuenta.', 'warning');
